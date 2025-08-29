@@ -347,6 +347,9 @@ plt.close()
 
 # 5. Average Completion Time by Country
 plt.figure(figsize=(16,8))
+
+# Define country_time first
+country_time = analysis_results['country_analysis'].dropna(subset=['Avg_Completion_Time'])
 country_time = country_time.sort_values('Avg_Completion_Time', ascending=False)
 
 colors = [get_rag_color(x, thresholds=(14, 30), reverse=True) for x in country_time['Avg_Completion_Time']]
@@ -433,27 +436,6 @@ for idx, row in worst_sites.iterrows():
     y = row['Late_Rate']*100
     plt.text(x, y+2, f"{idx[0]} ({idx[2]})", ha='center', fontsize=8, fontweight='bold')
 
-plt.title('Site Performance Quadrant Analysis', fontsize=14, fontweight='bold')
-plt.xlabel('Total Forms (Volume)')
-plt.ylabel('Late Rate (%)')
-
-# Add quadrant lines
-plt.axhline(y=median_late_rate * 100, color='gray', linestyle=':', alpha=0.7, 
-           label=f'Median Late Rate ({median_late_rate*100:.1f}%)')
-plt.axvline(x=median_volume, color='gray', linestyle=':', alpha=0.7, 
-           label=f'Median Volume ({median_volume:.0f})')
-
-# Add quadrant labels
-plt.text(median_volume * 1.5, median_late_rate * 100 * 1.2, 'High Vol\nHigh Risk', 
-         ha='center', va='center', fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", facecolor=COLORS['bad'], alpha=0.3))
-plt.text(median_volume * 1.5, median_late_rate * 100 * 0.3, 'High Vol\nLow Risk', 
-         ha='center', va='center', fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", facecolor=COLORS['good'], alpha=0.3))
-plt.text(median_volume * 0.3, median_late_rate * 100 * 1.2, 'Low Vol\nHigh Risk', 
-         ha='center', va='center', fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", facecolor=COLORS['warning'], alpha=0.3))
-plt.text(median_volume * 0.3, median_late_rate * 100 * 0.3, 'Low Vol\nLow Risk', 
-         ha='center', va='center', fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", facecolor=COLORS['neutral'], alpha=0.3))
-
-plt.legend()
 plt.tight_layout()
 plt.savefig("plots/7_site_volume_vs_late_rate.png", dpi=300)
 plt.close()
