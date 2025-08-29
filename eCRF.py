@@ -226,7 +226,18 @@ os.makedirs("plots", exist_ok=True)
 
 # 1. Country Late Rate Analysis
 plt.figure(figsize=(16,8))
+
+"""
 country_data = analysis_results['country_analysis']
+"""
+
+country_data = df.groupby('Country').agg(
+    Total_Forms = ('# Forms Complete ≤ 14 days', 'size'),
+    Late_Forms = ('# Forms Complete > 14 days', 'sum')
+)
+country_data['Late_Rate'] = country_data['Late_Forms'] / country_data['Total_Forms']
+country_data = country_data.fillna(0)
+
 late_percentages = country_data['Late_Rate'] * 100  # Convert to percentage
 
 # Apply RAG colors
@@ -265,7 +276,7 @@ if len(other_forms) > 0:
     pie_labels.append('Other')
 
 # Create pie chart
-colors_pie = [COLORS['bad']] * len(pie_data)  # All red as requested
+colors_pie = sns.color_palette("tab10", len(pie_data))
 wedges, texts, autotexts = plt.pie(pie_data, labels=pie_labels, autopct='%1.1f%%', 
                                   colors=colors_pie, startangle=90)
 
@@ -289,7 +300,7 @@ phase_data = analysis_results['phase_analysis']
 phase_percentages = phase_data['Late_Rate'] * 100
 
 colors = [get_rag_color(x/100) for x in phase_percentages]
-bars = plt.bar(phase_data.index, phase_percentages, color=colors)
+bars = plt.bar(phase_data.index, phase_percentages, color=COLORS['bad'])
 
 plt.title('Late Submission Rate by Study Phase', fontsize=14, fontweight='bold')
 plt.xlabel('Study Phase')
@@ -336,7 +347,7 @@ plt.close()
 
 # 5. Average Completion Time by Country
 plt.figure(figsize=(16,8))
-country_time = analysis_results['country_analysis'].dropna(subset=['Avg_Completion_Time'])
+country_time = country_time.sort_values('Avg_Completion_Time', ascending=False)
 
 colors = [get_rag_color(x, thresholds=(14, 30), reverse=True) for x in country_time['Avg_Completion_Time']]
 bars = plt.bar(country_time.index, country_time['Avg_Completion_Time'], color=colors)
@@ -402,32 +413,25 @@ plt.close()
 plt.figure(figsize=(12,8))
 site_scatter = analysis_results['site_analysis']
 
-# Calculate medians for quadrant lines
-median_volume = site_scatter['Total_Forms'].median()
-median_late_rate = site_scatter['Late_Rate'].median()
+# Bubble sizes rescaled with sqrt
+bubble_sizes = np.sqrt(site_scatter['Late_Forms'] + 1) * 10  # +1 avoids sqrt(0)
 
-# Create quadrants
-colors_quad = []
-labels_quad = []
-for _, row in site_scatter.iterrows():
-    volume = row['Total_Forms']
-    late_rate = row['Late_Rate']
-    
-    if volume >= median_volume and late_rate >= median_late_rate:
-        colors_quad.append(COLORS['bad'])  # High Volume, High Risk
-        labels_quad.append('High Vol, High Risk')
-    elif volume >= median_volume and late_rate < median_late_rate:
-        colors_quad.append(COLORS['good'])  # High Volume, Low Risk
-        labels_quad.append('High Vol, Low Risk')
-    elif volume < median_volume and late_rate >= median_late_rate:
-        colors_quad.append(COLORS['warning'])  # Low Volume, High Risk
-        labels_quad.append('Low Vol, High Risk')
-    else:
-        colors_quad.append(COLORS['neutral'])  # Low Volume, Low Risk
-        labels_quad.append('Low Vol, Low Risk')
+# Bubble chart
+plt.scatter(site_scatter['Total_Forms'], site_scatter['Late_Rate'] * 100,
+            s=bubble_sizes,
+            c=[get_rag_color(x) for x in site_scatter['Late_Rate']],
+            alpha=0.6, edgecolors='k')
 
-scatter = plt.scatter(site_scatter['Total_Forms'], site_scatter['Late_Rate'] * 100,
-                     c=colors_quad, alpha=0.6, s=60)
+plt.title('Site Performance Bubble Chart (Volume vs Late Rate)', fontsize=14, fontweight='bold')
+plt.xlabel('Total Forms (Volume)')
+plt.ylabel('Late Rate (%)')
+
+# Label 5 worst sites
+worst_sites = site_scatter.sort_values(['Late_Rate','Late_Forms'], ascending=[False,False]).head(5)
+for idx, row in worst_sites.iterrows():
+    x = row['Total_Forms']
+    y = row['Late_Rate']*100
+    plt.text(x, y+2, f"{idx[0]} ({idx[2]})", ha='center', fontsize=8, fontweight='bold')
 
 plt.title('Site Performance Quadrant Analysis', fontsize=14, fontweight='bold')
 plt.xlabel('Total Forms (Volume)')
@@ -495,37 +499,51 @@ plt.savefig("plots/8_completion_time_distribution.png", dpi=300)
 plt.close()
 
 # 9. Trend Over Time (Global, Country, Site)
-plt.figure(figsize=(14,8))
+# Create shared month axis (once)
 df['Completion_Month'] = pd.to_datetime(df['Form Complete Date'], errors='coerce').dt.to_period('M')
 trend = df.groupby('Completion_Month')['Is_Late'].mean().reset_index()
-trend['On_Time'] = 1 - trend['Is_Late']
-
-# Convert period to string for better x-axis labels
+trend['On_Time'] = (1 - trend['Is_Late']) * 100
 trend['Month_Str'] = trend['Completion_Month'].astype(str)
 
-# Plot global trend
-plt.plot(range(len(trend)), trend['On_Time']*100, marker='o', linewidth=3, 
-         label="Global", markersize=8, color=COLORS['neutral'])
+fig = go.Figure()
 
-# Add 5 worst performing countries
+# Add Global line (thick)
+fig.add_trace(go.Scatter(
+    x=trend['Month_Str'], 
+    y=trend['On_Time'],
+    mode='lines+markers',
+    name='Global',
+    line=dict(width=4, color='#708090'),
+    marker=dict(size=8)
+))
+
+# Add worst 5 countries (thinner lines)
 worst_countries = analysis_results['country_analysis'].head(5).index
-colors_trend = [COLORS['bad'], COLORS['warning'], '#8B0000', '#FF4500', '#DC143C']
+colors_trend = ['#9b111e', '#ff9f14', '#8B0000', '#FF4500', '#DC143C']
+
 for i, country in enumerate(worst_countries):
     country_trend = df[df['Country']==country].groupby('Completion_Month')['Is_Late'].mean().reset_index()
     if len(country_trend) > 0:
-        country_trend['On_Time'] = 1 - country_trend['Is_Late']
-        plt.plot(range(len(country_trend)), country_trend['On_Time']*100, 
-                marker='s', label=f'{country} (worst)', color=colors_trend[i], markersize=4)
+        country_trend['On_Time'] = (1 - country_trend['Is_Late']) * 100
+        country_trend['Month_Str'] = country_trend['Completion_Month'].astype(str)
+        
+        fig.add_trace(go.Scatter(
+            x=country_trend['Month_Str'],
+            y=country_trend['On_Time'],
+            mode='lines+markers',
+            name=f'{country} (worst)',
+            line=dict(width=2, color=colors_trend[i], dash='dash'),
+            marker=dict(size=4)
+        ))
 
-plt.title("On-Time % Trend Over Time", fontsize=14, fontweight="bold")
-plt.ylabel("% On-Time (<14 days)")
-plt.xlabel("Month")
-plt.xticks(range(len(trend)), trend['Month_Str'], rotation=45)
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig("plots/9_trend_over_time.png", dpi=300, bbox_inches='tight')
-plt.close()
+fig.update_layout(
+    title="On-Time % Trend Over Time (Interactive)",
+    xaxis_title="Month",
+    yaxis_title="% On-Time (<14 days)",
+    hovermode='x unified'
+)
+
+fig.write_html("plots/9_trend_over_time_interactive.html")
 
 # 10. On-Time vs Late Split
 plt.figure(figsize=(8,6))
