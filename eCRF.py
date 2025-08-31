@@ -12,6 +12,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from matplotlib.ticker import FuncFormatter
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.image as mpimg
 
 # Color scheme configuration
 COLORS = {
@@ -847,3 +849,36 @@ for form_name, data in problem_forms.iterrows():
 print("\n" + "="*80)
 print("ANALYSIS COMPLETE - All plots saved to 'plots/' directory")
 print("="*80)
+
+# List of all chart image paths you saved
+chart_paths = [
+    "plots/1_country_late_rate.png",
+    "plots/2_form_type_analysis.png",
+    "plots/3_study_phase_analysis.png",
+    "plots/4_site_performance.png",
+    "plots/5_avg_completion_time_by_country.png",
+    "plots/6_therapy_area_analysis.png",
+    "plots/7_site_volume_vs_late_rate_refactored.png",
+    "plots/8_completion_time_distribution.png",
+    # skip interactive HTML chart #9
+    "plots/10_on_time_vs_late_split.png",
+    "plots/11_cra_performance.png",
+    "plots/12_visit_type_analysis.png",
+    "plots/13_rag_benchmark.png",
+    "plots/14_best_worst_leaderboard.png",
+    "plots/15_early_warning.png"
+]
+
+# Create a multi-page PDF
+with PdfPages("eCRF_Late_Submission_Report.pdf") as pdf:
+    for path in chart_paths:
+        if os.path.exists(path):
+            fig, ax = plt.subplots(figsize=(12, 8))
+            img = mpimg.imread(path)
+            ax.imshow(img)
+            ax.axis('off')
+            plt.tight_layout()
+            pdf.savefig(fig)
+            plt.close(fig)
+
+print("✅ PDF generated: eCRF_Late_Submission_Report.pdf")
