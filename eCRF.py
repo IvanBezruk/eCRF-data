@@ -11,6 +11,7 @@ from sklearn.preprocessing import LabelEncoder
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from matplotlib.ticker import FuncFormatter
 
 # Color scheme configuration
 COLORS = {
@@ -238,6 +239,8 @@ country_data = df.groupby('Country').agg(
 country_data['Late_Rate'] = country_data['Late_Forms'] / country_data['Total_Forms']
 country_data = country_data.fillna(0)
 
+country_data = country_data.sort_values('Late_Forms', ascending=False)
+
 late_percentages = country_data['Late_Rate'] * 100  # Convert to percentage
 
 # Apply RAG colors
@@ -262,23 +265,37 @@ plt.close()
 
 
 # 2. Form Type Analysis (Top 10 most problematic)
-plt.figure(figsize=(12,8))
-form_data = analysis_results['form_analysis']
+form_data = analysis_results['form_analysis'].sort_values('Late_Forms', ascending=False)
 top_10_forms = form_data.head(10)
 other_forms = form_data.iloc[10:]
 
-# Prepare data for pie chart
+# Prepare data
 pie_data = top_10_forms['Late_Forms'].tolist()
-pie_labels = [label[:30] + '...' if len(label) > 30 else label for label in top_10_forms.index.tolist()]
+pie_labels = [label[:30] + '...' if len(label) > 30 else label for label in top_10_forms.index]
 
 if len(other_forms) > 0:
     pie_data.append(other_forms['Late_Forms'].sum())
     pie_labels.append('Other')
 
+# Color palette with many distinct colors
+colors_pie = sns.color_palette("tab20", len(pie_data))  
+
+# Force "Other" to grey if it exists
+if 'Other' in pie_labels:
+    colors_pie[-1] = (0.6, 0.6, 0.6)
+
 # Create pie chart
-colors_pie = sns.color_palette("tab10", len(pie_data))
+colors_pie = sns.color_palette("husl", len(pie_data))
+if 'Other' in pie_labels:
+    colors_pie[-1] = (0.6,0.6,0.6)  # force grey
 wedges, texts, autotexts = plt.pie(pie_data, labels=pie_labels, autopct='%1.1f%%', 
                                   colors=colors_pie, startangle=90)
+
+plt.figure(figsize=(12,8))
+wedges, texts, autotexts = plt.pie(
+    pie_data, labels=pie_labels, autopct='%1.1f%%',
+    colors=colors_pie, startangle=90
+)
 
 # Add counts to the labels
 for i, (wedge, count) in enumerate(zip(wedges, pie_data)):
@@ -312,6 +329,9 @@ for bar, late_count in zip(bars, phase_data['Late_Forms']):
     height = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
              f'{int(late_count)}', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+total_late_forms = phase_data['Late_Forms'].sum()
+print(f"\nStudy phases responsible for {int(total_late_forms)} late forms in total")
 
 plt.tight_layout()
 plt.savefig("plots/3_study_phase_analysis.png", dpi=300)
@@ -413,31 +433,68 @@ plt.close()
 
 
 # 7. Volume vs Late Rate Scatter (Sites)
-plt.figure(figsize=(12,8))
+plt.figure(figsize=(12, 8))
 site_scatter = analysis_results['site_analysis']
 
-# Bubble sizes rescaled with sqrt
+# Bubble sizes rescaled with sqrt (normalized)
 bubble_sizes = np.sqrt(site_scatter['Late_Forms'] + 1) * 10  # +1 avoids sqrt(0)
 
 # Bubble chart
-plt.scatter(site_scatter['Total_Forms'], site_scatter['Late_Rate'] * 100,
-            s=bubble_sizes,
-            c=[get_rag_color(x) for x in site_scatter['Late_Rate']],
-            alpha=0.6, edgecolors='k')
+sc = plt.scatter(site_scatter['Total_Forms'],
+                 site_scatter['Late_Rate'] * 100,
+                 s=bubble_sizes,
+                 c=[get_rag_color(x) for x in site_scatter['Late_Rate']],
+                 alpha=0.6, edgecolors='k', linewidths=0.5)
 
-plt.title('Site Performance Bubble Chart (Volume vs Late Rate)', fontsize=14, fontweight='bold')
-plt.xlabel('Total Forms (Volume)')
-plt.ylabel('Late Rate (%)')
+# Improvements: log scale on X
+plt.xscale("log")
 
-# Label 5 worst sites
-worst_sites = site_scatter.sort_values(['Late_Rate','Late_Forms'], ascending=[False,False]).head(5)
+# Titles and labels
+plt.title('Site Performance Bubble Chart (Volume vs Late Rate)', fontsize=16, fontweight='bold')
+plt.suptitle("Bubble size = # Late Forms | Color = Late Rate (RAG)", fontsize=10, y=0.92)
+plt.xlabel('Total Forms (log scale)', fontsize=12)
+plt.ylabel('Late Rate (%)', fontsize=12)
+
+# Format x-axis to show thousands with commas
+plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{int(x):,}"))
+
+# Add horizontal reference lines for late rate benchmarks
+for ref in [20, 40, 60]:
+    plt.axhline(ref, color='gray', linestyle='--', linewidth=0.7)
+    plt.text(plt.xlim()[1], ref+1, f"{ref}%", color='gray',
+             ha='right', va='bottom', fontsize=8)
+
+# Label worst 5 performers clearly with annotations
+worst_sites = site_scatter.sort_values(['Late_Rate','Late_Forms'],
+                                       ascending=[False, False]).head(5)
 for idx, row in worst_sites.iterrows():
     x = row['Total_Forms']
-    y = row['Late_Rate']*100
-    plt.text(x, y+2, f"{idx[0]} ({idx[2]})", ha='center', fontsize=8, fontweight='bold')
+    y = row['Late_Rate'] * 100
+    plt.annotate(f"{idx[0]} ({idx[2]})",
+                 (x, y),
+                 xytext=(30, 10), textcoords="offset points",
+                 fontsize=8, fontweight='bold',
+                 arrowprops=dict(arrowstyle="->", lw=0.7))
 
-plt.tight_layout()
-plt.savefig("plots/7_site_volume_vs_late_rate.png", dpi=300)
+# Highlight one of the best sites (lowest late rate, highest volume)
+best_site = site_scatter.sort_values(['Late_Rate','Total_Forms'],
+                                     ascending=[True, False]).head(1)
+x, y = best_site['Total_Forms'].values[0], best_site['Late_Rate'].values[0] * 100
+plt.scatter(x, y, s=150, edgecolor='blue', facecolor='none', linewidths=1.5, zorder=5)
+plt.annotate("Top Performer", (x, y), xytext=(-40, -30),
+             textcoords="offset points", fontsize=9,
+             color='blue', arrowprops=dict(arrowstyle="->", lw=1, color='blue'))
+
+# Legend placeholders (bubble sizes)
+for size in [10, 100, 1000]:
+    plt.scatter([], [], s=np.sqrt(size) * 10, c='gray', alpha=0.4,
+                label=f"{size} Late Forms")
+
+plt.legend(scatterpoints=1, frameon=True, labelspacing=1,
+           title="Bubble Size Reference", fontsize=8)
+
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.savefig("plots/7_site_volume_vs_late_rate_refactored.png", dpi=300)
 plt.close()
 
 
@@ -596,7 +653,7 @@ visit_late_rate = df.groupby('Visit Name').agg({
     'Is_Late': ['count', 'sum', 'mean']
 }).round(3)
 visit_late_rate.columns = ['Total_Forms', 'Late_Forms', 'Late_Rate']
-visit_late_rate = visit_late_rate[visit_late_rate['Total_Forms'] >= 5]  # Filter visits with at least 5 forms
+visit_late_rate = visit_late_rate[visit_late_rate['Total_Forms'] >= 20]  # Filter visits with at least 5 forms
 visit_late_rate = visit_late_rate.sort_values('Late_Rate', ascending=False).head(15)
 
 visit_percentages = visit_late_rate['Late_Rate'] * 100
@@ -628,6 +685,12 @@ colors = country_perf['On_Time_Pct'].apply(
 )
 
 bars = plt.bar(country_perf['Country'], country_perf['On_Time_Pct'], color=colors)
+
+for bar, late_count in zip(bars, df.groupby('Country')['Is_Late'].sum()):
+    height = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2., height + 1,
+             f'n={int(late_count)}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+
 plt.title("RAG Benchmark: On-Time Submissions by Country (Descending Order)", fontsize=14, fontweight="bold")
 plt.xticks(rotation=45, ha='right')
 plt.ylabel("% On-Time (<14 days)")
@@ -701,6 +764,9 @@ else:
     plt.text(0.5, 0.5, 'No sites with <50% On-Time performance', 
              ha='center', va='center', transform=plt.gca().transAxes, fontsize=14)
     plt.title("Early Warning: High Risk Sites (<50% On-Time)", fontsize=14, fontweight="bold")
+
+site_perf_detailed['Late_Contribution_Pct'] = (
+    site_perf_detailed['Late_Forms'] / total_late_forms) * 100
 
 plt.tight_layout()
 plt.savefig("plots/15_early_warning.png", dpi=300)
