@@ -14,6 +14,7 @@ from plotly.subplots import make_subplots
 from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.image as mpimg
+import textwrap
 
 # Color scheme configuration
 COLORS = {
@@ -850,35 +851,203 @@ print("\n" + "="*80)
 print("ANALYSIS COMPLETE - All plots saved to 'plots/' directory")
 print("="*80)
 
-# List of all chart image paths you saved
-chart_paths = [
-    "plots/1_country_late_rate.png",
-    "plots/2_form_type_analysis.png",
-    "plots/3_study_phase_analysis.png",
-    "plots/4_site_performance.png",
-    "plots/5_avg_completion_time_by_country.png",
-    "plots/6_therapy_area_analysis.png",
-    "plots/7_site_volume_vs_late_rate_refactored.png",
-    "plots/8_completion_time_distribution.png",
-    # skip interactive HTML chart #9
-    "plots/10_on_time_vs_late_split.png",
-    "plots/11_cra_performance.png",
-    "plots/12_visit_type_analysis.png",
-    "plots/13_rag_benchmark.png",
-    "plots/14_best_worst_leaderboard.png",
-    "plots/15_early_warning.png"
-]
 
-# Create a multi-page PDF
-with PdfPages("eCRF_Late_Submission_Report.pdf") as pdf:
-    for path in chart_paths:
-        if os.path.exists(path):
-            fig, ax = plt.subplots(figsize=(12, 8))
-            img = mpimg.imread(path)
-            ax.imshow(img)
-            ax.axis('off')
-            plt.tight_layout()
-            pdf.savefig(fig)
-            plt.close(fig)
+# Function for chart+text pages (MOVE THIS UP)
+def create_chart_page(pdf, chart_path, title, description, insights):
+    fig = plt.figure(figsize=(11, 8.5))
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.5, 0.3, 1.2])
+
+    # Chart
+    ax_chart = fig.add_subplot(gs[0])
+    img = mpimg.imread(chart_path)
+    ax_chart.imshow(img)
+    ax_chart.axis('off')
+
+    # Title area
+    ax_title = fig.add_subplot(gs[1])
+    ax_title.text(0.5, 0.5, title, fontsize=14, fontweight="bold",
+                  ha="center", va="center")
+    ax_title.axis('off')
+
+    # Text area
+    ax_text = fig.add_subplot(gs[2])
+    wrapped = textwrap.fill(description + "\n\n" + insights, width=110)
+    ax_text.text(0.05, 0.95, wrapped, fontsize=9,
+                 ha="left", va="top", transform=ax_text.transAxes)
+    ax_text.axis('off')
+
+    pdf.savefig(fig, bbox_inches='tight')
+    plt.close(fig)
+
+# Define insight text blocks
+country_insights = """KEY INSIGHTS:
+• Italy leads with highest late rate (42.5%) and significant volume (20,040 late forms)
+• China demonstrates best performance with only 11.0% late rate despite high volume (30,320 forms)
+• Korea shows moderate performance (24.5% late rate) but highest absolute volume (87,458 late forms)
+• EMEA region shows highest average late rates (33.4%)"""
+
+form_insights = """KEY INSIGHTS:
+• ePRO PROXY INFORMATION shows 100% late rate (57 forms)
+• Surgical pathology forms consistently problematic (100% late rates)
+• Protocol milestone forms require immediate attention
+• Top 10 forms account for significant portion of delays"""
+
+phase_insights = """KEY INSIGHTS:
+• Phase II shows highest late rate (29.7%) with 15,230 late forms
+• Phase III represents largest volume (164,904 late forms, 22.1% rate)
+• Phase IIB/III shows best performance (8.6% late rate)
+• Early phase studies generally show higher completion times"""
+
+site_insights = """KEY INSIGHTS:
+• 28 sites show >70% late rates requiring immediate intervention
+• Mexico site 7684A-008-0410 shows 100% late rate (18/18 forms)
+• Korean sites dominate worst performers list
+• Geographic clustering of performance issues evident"""
+
+time_insights = """KEY INSIGHTS:
+• Italy shows longest average completion time (33.4 days)
+• China maintains shortest completion time (8.2 days)
+• 14-day threshold exceeded by most countries
+• Strong correlation between completion time and late rate"""
+
+therapy_insights = """KEY INSIGHTS:
+• Therapy areas show varying late submission patterns
+• Oncology studies generally show higher late rates
+• Volume concentration in specific therapy areas
+• Resource allocation opportunities identified"""
+
+bubble_insights = """KEY INSIGHTS:
+• High-volume sites don't necessarily have high late rates
+• Several low-volume sites show concerning 100% late rates
+• Best performers combine high volume with low late rates
+• Bubble size indicates impact potential for interventions"""
+
+distribution_insights = """KEY INSIGHTS:
+• Median completion time: 12.1 days (below 14-day threshold)
+• Long tail distribution with some forms taking >200 days
+• 25% of forms completed within 6.8 days
+• Distribution suggests systematic delays in subset of forms"""
+
+split_insights = """KEY INSIGHTS:
+• Overall 76.8% on-time performance across all forms
+• 23.2% late submission rate requires attention
+• 271,812 forms completed late (>14 days)
+• Performance gap from industry benchmarks evident"""
+
+cra_insights = """KEY INSIGHTS:
+• Significant variation in CRA performance (0-100% on-time rates)
+• Top performers achieve >95% on-time rates consistently
+• Bottom performers require immediate training/support
+• CRA performance directly impacts site outcomes"""
+
+visit_insights = """KEY INSIGHTS:
+• Follow-up visits show highest late rates (100% for some)
+• Cycle-based visits demonstrate consistent delays
+• Visit complexity correlates with completion delays
+• Scheduling optimization opportunities identified"""
+
+rag_insights = """KEY INSIGHTS:
+• Only Finland achieves 'Green' status (>80% on-time)
+• Most countries fall in 'Red' category (<60% on-time)
+• Clear performance tiers visible across countries
+• Benchmark gaps indicate improvement potential"""
+
+leaderboard_insights = """KEY INSIGHTS:
+• Best sites achieve >95% on-time performance
+• Worst sites show <20% on-time performance
+• Geographic diversity in both best and worst performers
+• Performance spread indicates training/process opportunities"""
+
+warning_insights = """KEY INSIGHTS:
+• 25 sites identified as high-risk (<50% on-time)
+• These sites contribute disproportionately to late forms
+• Immediate intervention required for worst performers
+• Early warning system can prevent further deterioration"""
+
+# Create enhanced PDF with insights
+with PdfPages("Enhanced_eCRF_Report.pdf") as pdf:
+    # Chart 1: Country Analysis
+    create_chart_page(pdf, "plots/1_country_late_rate.png",
+                      "Chart 1: Country Late Rate Analysis",
+                      "Late submission rates by country, ordered by total late forms. Colors indicate RAG status.",
+                      country_insights)
+    
+    # Chart 2: Form Type Analysis  
+    create_chart_page(pdf, "plots/2_form_type_analysis.png",
+                      "Chart 2: Form Type Analysis",
+                      "Distribution of late forms across different form types (Top 10 + Other).",
+                      form_insights)
+    
+    # Chart 3: Study Phase Analysis
+    create_chart_page(pdf, "plots/3_study_phase_analysis.png", 
+                      "Chart 3: Study Phase Analysis",
+                      "Late submission rates across different study phases.",
+                      phase_insights)
+    
+    # Chart 4: Site Performance
+    create_chart_page(pdf, "plots/4_site_performance.png",
+                      "Chart 4: Site Performance Analysis", 
+                      "Top 20 worst performing sites (>5 forms). Colors indicate RAG status.",
+                      site_insights)
+    
+    # Chart 5: Completion Time by Country
+    create_chart_page(pdf, "plots/5_avg_completion_time_by_country.png",
+                      "Chart 5: Average Completion Time by Country",
+                      "Average form completion time by country with 14-day threshold reference.",
+                      time_insights)
+    
+    # Chart 6: Therapy Area Analysis
+    create_chart_page(pdf, "plots/6_therapy_area_analysis.png",
+                      "Chart 6: Therapy Area Analysis", 
+                      "Late submission rates by therapy area (Top 10 + Other).",
+                      therapy_insights)
+    
+    # Chart 7: Volume vs Late Rate Bubble
+    create_chart_page(pdf, "plots/7_site_volume_vs_late_rate_refactored.png",
+                      "Chart 7: Site Volume vs Late Rate Analysis",
+                      "Bubble chart showing relationship between site volume and late rates.",
+                      bubble_insights)
+    
+    # Chart 8: Completion Time Distribution
+    create_chart_page(pdf, "plots/8_completion_time_distribution.png",
+                      "Chart 8: Completion Time Distribution",
+                      "Global distribution of form completion times with statistical markers.",
+                      distribution_insights)
+    
+    # Chart 10: On-Time vs Late Split
+    create_chart_page(pdf, "plots/10_on_time_vs_late_split.png",
+                      "Chart 10: Overall On-Time vs Late Split",
+                      "Overall performance split showing on-time vs late submissions.",
+                      split_insights)
+    
+    # Chart 11: CRA Performance
+    create_chart_page(pdf, "plots/11_cra_performance.png",
+                      "Chart 11: CRA Performance Analysis",
+                      "Best and worst performing CRAs (minimum 5 forms).",
+                      cra_insights)
+    
+    # Chart 12: Visit Type Analysis
+    create_chart_page(pdf, "plots/12_visit_type_analysis.png",
+                      "Chart 12: Visit Type Analysis",
+                      "Late rates by visit type (Top 15, minimum 20 forms).",
+                      visit_insights)
+    
+    # Chart 13: RAG Benchmark
+    create_chart_page(pdf, "plots/13_rag_benchmark.png",
+                      "Chart 13: RAG Benchmark Analysis",
+                      "Country performance against RAG thresholds (80% good, 60% warning).",
+                      rag_insights)
+    
+    # Chart 14: Best vs Worst Leaderboard
+    create_chart_page(pdf, "plots/14_best_worst_leaderboard.png",
+                      "Chart 14: Site Performance Leaderboard",
+                      "Top 10 best and worst performing sites (minimum 5 forms).",
+                      leaderboard_insights)
+    
+    # Chart 15: Early Warning
+    create_chart_page(pdf, "plots/15_early_warning.png",
+                      "Chart 15: Early Warning Dashboard",
+                      "High-risk sites requiring immediate attention (<50% on-time).",
+                      warning_insights)
 
 print("✅ PDF generated: eCRF_Late_Submission_Report.pdf")
