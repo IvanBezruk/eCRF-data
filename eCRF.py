@@ -225,15 +225,38 @@ def analyze_ecrf_late_submissions(df):
 # Run the analysis
 analysis_results = analyze_ecrf_late_submissions(df)
 
+# 🔥 GENERATE ALL INSIGHTS (put this block here)
+# Country insights
+top_countries = analysis_results['country_analysis'].head(3)
+country_insights = "KEY INSIGHTS:\n\n"
+for country, row in top_countries.iterrows():
+    country_insights += f"• {country}: {row['Late_Rate']:.1%} late rate ({int(row['Late_Forms'])}/{int(row['Total_Forms'])} forms)\n"
+
+# Form insights  
+problem_forms = analysis_results['form_analysis']
+form_insights = "KEY INSIGHTS:\n\n"
+for form, row in problem_forms.head(5).iterrows():
+    form_insights += f"• {form[:40]}: {row['Late_Rate']:.1%} late rate ({int(row['Late_Forms'])} forms)\n"
+
+# Phase insights
+phase_data = analysis_results['phase_analysis']
+phase_insights = "KEY INSIGHTS:\n\n"
+for phase, row in phase_data.iterrows():
+    phase_insights += f"• {phase}: {row['Late_Rate']:.1%} late rate ({int(row['Late_Forms'])} forms)\n"
+
+# Site insights
+worst_sites = analysis_results['site_analysis'].sort_values('Late_Rate', ascending=False).head(5)
+site_insights = "KEY INSIGHTS:\n\n"
+for (site_id, site_name, country), row in worst_sites.iterrows():
+    site_insights += f"• {site_id} ({country}): {row['Late_Rate']:.1%} late rate ({int(row['Late_Forms'])}/{int(row['Total_Forms'])} forms)\n"
+
+# ... (continue for other insights)
+
 # Create an output folder
 os.makedirs("plots", exist_ok=True)
 
-# 1. Country Late Rate Analysis
+# 1. Country Late Rate Analysis (your existing plotting code)
 plt.figure(figsize=(16,8))
-
-"""
-country_data = analysis_results['country_analysis']
-"""
 
 country_data = df.groupby('Country').agg(
     Total_Forms = ('# Forms Complete ≤ 14 days', 'size'),
