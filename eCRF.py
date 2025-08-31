@@ -343,7 +343,7 @@ plt.close()
 
 # 4. Site Performance Analysis
 plt.figure(figsize=(16,8))
-site_data = analysis_results['site_analysis'][analysis_results['site_analysis']['Total_Forms'] > 5]
+site_data = analysis_results['site_analysis'][analysis_results['site_analysis']['Total_Forms'] > 20]
 site_data = site_data.sort_values('Late_Rate', ascending=False).head(20)
 site_percentages = site_data['Late_Rate'] * 100
 
