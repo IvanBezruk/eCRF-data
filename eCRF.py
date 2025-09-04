@@ -947,7 +947,7 @@ def create_chart_page(pdf, chart_path, title, description, insights):
     plt.close(fig)
 
 # Define insight text blocks
-country_insights = """KEY INSIGHTS:
+country_insights = """"""KEY INSIGHTS:
 • Italy leads with highest late rate (42.5%) and significant volume (20,040 late forms)
 • China demonstrates best performance with only 11.0% late rate despite high volume (30,320 forms)
 • Korea shows moderate performance (24.5% late rate) but highest absolute volume (87,458 late forms)
