@@ -16,6 +16,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.image as mpimg
 import textwrap
 
+# Load the data
+df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\SEE Report 03Sep2025.csv")
+
 # Color scheme configuration
 COLORS = {
     'good': '#004a3a',      # Emerald
@@ -85,7 +88,7 @@ def validate_data(df):
     return issues
 
 # Load the data
-df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\Data Entry compliance 14May2025 all dimentions.csv")
+df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\SEE Report 03Sep2025.csv")
 
 # Display basic info about the dataset
 print("Dataset Overview:")
@@ -225,7 +228,7 @@ def analyze_ecrf_late_submissions(df):
 # Run the analysis
 analysis_results = analyze_ecrf_late_submissions(df)
 
-# 🔥 GENERATE ALL INSIGHTS (put this block here)
+# GENERATE ALL INSIGHTS (put this block here)
 # Country insights
 top_countries = analysis_results['country_analysis'].head(3)
 country_insights = "KEY INSIGHTS:\n\n"
