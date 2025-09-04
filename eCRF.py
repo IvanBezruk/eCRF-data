@@ -127,9 +127,6 @@ def validate_data(df):
     print(f"✅ Data validation complete. Total issues found: {len(issues)}")
     return issues
 
-# Load the data
-df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\SEE Report 03Sep2025.csv")
-
 # Display basic info about the dataset
 print("Dataset Overview:")
 print(f"Shape: {df.shape}")
