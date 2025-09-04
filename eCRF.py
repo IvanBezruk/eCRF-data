@@ -918,7 +918,8 @@ print("ANALYSIS COMPLETE - All plots saved to 'plots/' directory")
 print("="*80)
 
 
-# Function for chart+text pages (MOVE THIS UP)
+"""
+# Function for chart+text pages
 def create_chart_page(pdf, chart_path, title, description, insights):
     fig = plt.figure(figsize=(11, 8.5))
     gs = fig.add_gridspec(3, 1, height_ratios=[2.5, 0.3, 1.2])
@@ -1117,3 +1118,4 @@ with PdfPages("Enhanced_eCRF_Report.pdf") as pdf:
                       warning_insights)
 
 print("✅ PDF generated: eCRF_Late_Submission_Report.pdf")
+"""
