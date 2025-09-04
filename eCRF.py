@@ -19,6 +19,15 @@ import textwrap
 # Load the data
 df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\SEE Report 03Sep2025.csv")
 
+# Calculate the date 6 months ago from today
+six_months_ago = datetime.now() - timedelta(days=180)  # Approximately 6 months
+
+# Filter to keep only the last 6 months of data
+df = df[df['Form Complete Date'] >= six_months_ago]
+
+print(f"Data filtered to last 6 months. New dataset shape: {df.shape}")
+print(f"Date range: {df['Form Complete Date'].min()} to {df['Form Complete Date'].max()}")
+
 # Color scheme configuration
 COLORS = {
     'good': '#004a3a',      # Emerald
