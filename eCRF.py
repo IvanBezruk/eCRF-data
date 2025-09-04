@@ -20,6 +20,36 @@ from datetime import datetime, timedelta
 # Load the data
 df = pd.read_csv(r"C:\Users\a239584\Downloads\Coding\eCRF_data\SEE Report 03Sep2025.csv")
 
+# First, let's examine the date column to understand its format
+print("Sample date values:")
+print(df['Form Complete Date'].head(10))
+print(f"Data type: {df['Form Complete Date'].dtype}")
+
+# Convert the date column to datetime, handling various formats
+df['Form Complete Date'] = pd.to_datetime(df['Form Complete Date'], errors='coerce')
+
+# Check how many dates were successfully converted
+valid_dates = df['Form Complete Date'].notna().sum()
+total_records = len(df)
+print(f"Successfully converted {valid_dates} out of {total_records} dates")
+
+# Remove rows where date conversion failed (if you want to exclude them)
+df_with_dates = df[df['Form Complete Date'].notna()].copy()
+
+# Calculate the date 6 months ago from today
+six_months_ago = datetime.now() - timedelta(days=180)
+
+# Filter to keep only the last 6 months of data
+df_filtered = df_with_dates[df_with_dates['Form Complete Date'] >= six_months_ago]
+
+print(f"Original dataset shape: {df.shape}")
+print(f"After removing invalid dates: {df_with_dates.shape}")
+print(f"After filtering to last 6 months: {df_filtered.shape}")
+print(f"Date range: {df_filtered['Form Complete Date'].min()} to {df_filtered['Form Complete Date'].max()}")
+
+# Use the filtered dataset for your analysis
+df = df_filtered
+
 # Calculate the date 6 months ago from today
 six_months_ago = datetime.now() - timedelta(days=180)  # Approximately 6 months
 
